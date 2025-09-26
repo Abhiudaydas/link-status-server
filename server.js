@@ -1,21 +1,20 @@
-// server.js
 const express = require("express");
-const fetch = require("node-fetch");
 const cors = require("cors");
+const fetch = require("node-fetch"); // npm install node-fetch
 
 const app = express();
-app.use(express.json());
 app.use(cors());
+app.use(express.json());
 
 app.post("/check-links", async (req, res) => {
-  const { urls } = req.body;
+  const urls = req.body.urls || [];
   const results = [];
 
   for (const url of urls) {
     try {
-      const response = await fetch(url, { method: "HEAD" });
+      const response = await fetch(url, { method: "HEAD", redirect: "manual" });
       results.push({ url, status: response.status });
-    } catch (error) {
+    } catch (err) {
       results.push({ url, status: "Error / Blocked" });
     }
   }
@@ -23,7 +22,4 @@ app.post("/check-links", async (req, res) => {
   res.json(results);
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+app.listen(process.env.PORT || 3000, () => console.log("Server running"));
