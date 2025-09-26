@@ -1,25 +1,39 @@
-const express = require("express");
-const cors = require("cors");
-const fetch = require("node-fetch"); // npm install node-fetch
+import express from "express";
+import fetch from "node-fetch";
 
 const app = express();
-app.use(cors());
 app.use(express.json());
 
 app.post("/check-links", async (req, res) => {
-  const urls = req.body.urls || [];
-  const results = [];
+  const { urls } = req.body;
 
-  for (const url of urls) {
-    try {
-      const response = await fetch(url, { method: "HEAD", redirect: "manual" });
-      results.push({ url, status: response.status });
-    } catch (err) {
-      results.push({ url, status: "Error / Blocked" });
-    }
-  }
+  const results = await Promise.all(
+    urls.map(async (url) => {
+      try {
+        // Try HEAD first
+        let response = await fetch(url, { method: "HEAD" });
+
+        // Fall back to GET if HEAD fails
+        if (!response.ok || response.status === 405) {
+          response = await fetch(url, { method: "GET" });
+        }
+
+        return {
+          url,
+          status: response.ok
+            ? response.status.toString()
+            : response.status || "Error / Blocked",
+        };
+      } catch (err) {
+        console.error(`Error fetching ${url}:`, err.message);
+        return { url, status: "Error / Blocked" };
+      }
+    })
+  );
 
   res.json(results);
 });
 
-app.listen(process.env.PORT || 3000, () => console.log("Server running"));
+// Use Render-assigned PORT
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
